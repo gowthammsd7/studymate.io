@@ -8,6 +8,10 @@ export default function ToolTabs() {
     { id: "flash", label: "Flashcards" },
     { id: "plan", label: "Study Planner" },
     { id: "summary", label: "Summarizer" },
+    { id: "cloze", label: "Cloze Deletions" },
+    { id: "outline", label: "Outliner" },
+    { id: "simplify", label: "Simplifier" },
+    { id: "socratic", label: "Socratic Tutor" },
   ] as const;
   const [active, setActive] = useState<(typeof tabs)[number]["id"]>("quiz");
 
@@ -38,6 +42,10 @@ export default function ToolTabs() {
         {active === "flash" && <FlashcardMaker />}
         {active === "plan" && <StudyPlanner />}
         {active === "summary" && <Summarizer />}
+        {active === "cloze" && <ClozeMaker />}
+        {active === "outline" && <Outliner />}
+        {active === "simplify" && <Simplifier />}
+        {active === "socratic" && <SocraticTutor />}
       </div>
     </section>
   );
@@ -65,8 +73,22 @@ function words(text: string) {
 }
 
 const STOP = new Set([
-  "the","is","in","at","of","a","and","to","for","on","with","as","that","this","it","by","an","be","or","are","from","was","were","which","but","has","had","have","not","can","its","their","his","her","they","them","we","you"
+  "the","is","in","at","of","a","and","to","for","on","with","as","that","this","it","by","an","be","or","are","from","was","were","which","but","has","had","have","not","can","its","their","his","her","they","them","we","you","your","our"
 ]);
+
+function keywordFreqMap(text: string) {
+  const freq = new Map<string, number>();
+  for (const w of words(text)) {
+    if (STOP.has(w)) continue;
+    freq.set(w, (freq.get(w) || 0) + 1);
+  }
+  return freq;
+}
+
+function topKeywords(text: string, n = 20) {
+  const freq = keywordFreqMap(text);
+  return [...freq.entries()].sort((a, b) => b[1] - a[1]).map(([w]) => w).slice(0, n);
+}
 
 // ---------- Quiz Generator ----------
 function QuizGenerator() {
@@ -80,11 +102,7 @@ function QuizGenerator() {
 
   function makeMCQs(input: string, n: number): MCQ[] {
     const sents = sentences(input);
-    const freq = new Map<string, number>();
-    for (const w of words(input)) {
-      if (STOP.has(w)) continue;
-      freq.set(w, (freq.get(w) || 0) + 1);
-    }
+    const freq = keywordFreqMap(input);
 
     const candidates = sents
       .map((s) => ({ s, score: words(s).reduce((acc, w) => acc + (freq.get(w) || 0), 0) }))
@@ -376,11 +394,7 @@ function Summarizer() {
 function summarize(input: string, ratio: number) {
   const sents = sentences(input);
   if (sents.length === 0) return "";
-  const freq = new Map<string, number>();
-  for (const w of words(input)) {
-    if (STOP.has(w)) continue;
-    freq.set(w, (freq.get(w) || 0) + 1);
-  }
+  const freq = keywordFreqMap(input);
   const scored = sents.map((s) => ({ s, score: words(s).reduce((a, w) => a + (freq.get(w) || 0), 0) }));
   const keep = Math.max(1, Math.round(scored.length * ratio));
   return scored
@@ -389,6 +403,197 @@ function summarize(input: string, ratio: number) {
     .sort((a, b) => sents.indexOf(a.s) - sents.indexOf(b.s))
     .map((x) => x.s)
     .join(" ");
+}
+
+// ---------- Cloze Deletions ----------
+function ClozeMaker() {
+  const [text, setText] = useState("");
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [cloze, setCloze] = useState<string>("");
+
+  function generate() {
+    const keys = topKeywords(text, 12);
+    const marked = keys.reduce((acc, k) => acc.replace(new RegExp(`\\b${escapeReg(k)}\\b`, "gi"), "[[[___]]]"), text);
+    setHidden(keys);
+    setCloze(marked.replace(/\[\[\[___\]\]\]/g, "_____"));
+  }
+
+  return (
+    <>
+      <div className="glass">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-bold">Cloze Deletions</h3>
+          <Button onClick={generate}>Create cloze</Button>
+        </div>
+        <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste notes; key terms will be blanked out." className="mt-4 h-40 w-full resize-y rounded-lg border bg-background p-3 text-sm" />
+        {cloze && (
+          <div className="mt-4 space-y-3">
+            <div className="rounded-lg border bg-white/60 p-4 text-sm leading-relaxed dark:bg-white/10">{cloze}</div>
+            <div className="rounded-lg border p-3">
+              <div className="text-xs font-semibold text-muted-foreground">Answers</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {hidden.map((h, i) => (
+                  <span key={i} className="rounded-full border bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700">{capitalize(h)}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <Tips title="Improve cloze quality" items={["Use clean paragraphs without lists.", "Include definitions and key terms.", "Aim for 2–3 short paragraphs."]} />
+    </>
+  );
+}
+
+// ---------- Outliner ----------
+function Outliner() {
+  const [text, setText] = useState("");
+  const outline = useMemo(() => makeOutline(text), [text]);
+
+  return (
+    <>
+      <div className="glass">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-bold">Outliner</h3>
+        </div>
+        <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste notes to generate a hierarchical outline." className="mt-4 h-40 w-full resize-y rounded-lg border bg-background p-3 text-sm" />
+        {outline.length > 0 && (
+          <div className="mt-4 rounded-lg border p-4">
+            <ul className="space-y-2">
+              {outline.map((item, idx) => (
+                <li key={idx}>
+                  <div className="font-medium">{item.title}</div>
+                  {item.points.length > 0 && (
+                    <ul className="mt-1 ml-5 list-disc text-sm text-muted-foreground">
+                      {item.points.map((p, i) => (
+                        <li key={i}>{p}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      <Tips title="Outlining tips" items={["Group text by topic using blank lines.", "Keep headings short.", "Combine related sentences under a point."]} />
+    </>
+  );
+}
+
+function makeOutline(text: string) {
+  const blocks = text.split(/\n\s*\n+/).map((b) => b.trim()).filter(Boolean);
+  const freq = keywordFreqMap(text);
+  return blocks.map((b) => {
+    const sents = sentences(b);
+    const title = sents[0] || b.slice(0, 60);
+    const points = sents.slice(1).sort((a, b) => scoreSent(b, freq) - scoreSent(a, freq)).slice(0, 4);
+    return { title, points };
+  });
+}
+
+function scoreSent(s: string, freq: Map<string, number>) {
+  return words(s).reduce((a, w) => a + (freq.get(w) || 0), 0);
+}
+
+// ---------- Simplifier ----------
+function Simplifier() {
+  const [text, setText] = useState("");
+  const simplified = useMemo(() => simplify(text), [text]);
+
+  return (
+    <>
+      <div className="glass">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-bold">Simplifier</h3>
+        </div>
+        <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste complex text to rewrite in simpler language." className="mt-4 h-40 w-full resize-y rounded-lg border bg-background p-3 text-sm" />
+        {simplified && (
+          <div className="mt-4 rounded-lg border bg-white/60 p-4 text-sm leading-relaxed dark:bg-white/10">{simplified}</div>
+        )}
+      </div>
+      <Tips title="Better simplifications" items={["Use full sentences.", "Avoid lists and tables.", "Short paragraphs work best."]} />
+    </>
+  );
+}
+
+const SIMPLE_SYNONYMS: Record<string, string> = {
+  utilize: "use",
+  commence: "start",
+  terminate: "end",
+  demonstrate: "show",
+  approximately: "about",
+  numerous: "many",
+  consequently: "so",
+  therefore: "so",
+  however: "but",
+  furthermore: "also",
+  obtain: "get",
+  prior: "before",
+  subsequent: "after",
+};
+
+function simplify(text: string) {
+  const sents = sentences(text);
+  const out = sents.map((s) =>
+    s
+      .replace(/\([^\)]*\)/g, "")
+      .replace(/,?\s?which\s/gi, " ")
+      .replace(/,?\s?that\s/gi, " ")
+      .split(/\s+/)
+      .map((w) => {
+        const lw = w.toLowerCase().replace(/[^a-z]/gi, "");
+        return SIMPLE_SYNONYMS[lw] ? matchCase(SIMPLE_SYNONYMS[lw], w) : w;
+      })
+      .join(" ")
+      .replace(/\s{2,}/g, " ")
+      .trim(),
+  );
+  return out.join(" ");
+}
+
+function matchCase(replacement: string, original: string) {
+  if (original[0] === original[0]?.toUpperCase()) return capitalize(replacement);
+  return replacement;
+}
+
+// ---------- Socratic Tutor ----------
+function SocraticTutor() {
+  const [text, setText] = useState("");
+  const [qs, setQs] = useState<string[]>([]);
+
+  function generate() {
+    const sents = sentences(text);
+    const keys = topKeywords(text, 8);
+    const crafted: string[] = [];
+    if (sents[0]) crafted.push(`What is the main idea of: "${sents[0]}"?`);
+    for (const k of keys.slice(0, 5)) {
+      crafted.push(`How would you define "${k}" in your own words?`);
+      crafted.push(`Can you give a real-world example of ${k}?`);
+    }
+    if (sents.length > 1) crafted.push(`How does the last sentence relate to the first?`);
+    setQs(crafted.slice(0, 10));
+  }
+
+  return (
+    <>
+      <div className="glass">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-bold">Socratic Tutor</h3>
+          <Button onClick={generate}>Generate questions</Button>
+        </div>
+        <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste a passage to receive guiding questions." className="mt-4 h-40 w-full resize-y rounded-lg border bg-background p-3 text-sm" />
+        {qs.length > 0 && (
+          <ol className="mt-4 list-decimal space-y-2 rounded-lg border p-4 pl-6 text-sm">
+            {qs.map((q, i) => (
+              <li key={i}>{q}</li>
+            ))}
+          </ol>
+        )}
+      </div>
+      <Tips title="Use the tutor effectively" items={["Answer aloud or in writing.", "If stuck, break the question into parts.", "Re-read the text after answering."]} />
+    </>
+  );
 }
 
 // ---------- Shared UI ----------
@@ -425,4 +630,8 @@ function cryptoRandom() {
     return b[0].toString(16);
   }
   return Math.random().toString(16).slice(2);
+}
+
+function escapeReg(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
