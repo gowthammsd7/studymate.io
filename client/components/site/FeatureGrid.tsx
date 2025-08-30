@@ -21,10 +21,17 @@ const features = [
 
 export default function FeatureGrid() {
   return (
-    <section id="features" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <section
+      id="features"
+      className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Everything you need to study smarter</h2>
-        <p className="mt-3 text-muted-foreground">Beautiful, fast, and built for deep work.</p>
+        <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+          Everything you need to study smarter
+        </h2>
+        <p className="mt-3 text-muted-foreground">
+          Beautiful, fast, and built for deep work.
+        </p>
       </div>
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {features.map((f) => (

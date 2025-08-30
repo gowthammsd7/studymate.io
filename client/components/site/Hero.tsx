@@ -9,15 +9,21 @@ export default function Hero() {
       </div>
       <div className="mx-auto max-w-7xl px-4 pb-12 pt-16 sm:px-6 md:pb-20 md:pt-24 lg:px-8 lg:pb-28 lg:pt-32">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border bg-white/60 px-4 py-1.5 text-xs font-semibold text-violet-700 shadow-sm dark:bg-white/10">Your AI study copilot</span>
+          <span className="inline-flex items-center gap-2 rounded-full border bg-white/60 px-4 py-1.5 text-xs font-semibold text-violet-700 shadow-sm dark:bg-white/10">
+            Your AI study copilot
+          </span>
           <h1 className="mt-6 bg-gradient-to-br from-slate-900 to-slate-600 bg-clip-text text-4xl font-extrabold text-transparent sm:text-5xl md:text-6xl dark:from-white dark:to-slate-300">
             Master any subject with StudyMate.AI
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Generate quizzes from your notes, create flashcards, plan focused sessions, and get instant summaries — all in one beautiful, fast app.
+            Generate quizzes from your notes, create flashcards, plan focused
+            sessions, and get instant summaries — all in one beautiful, fast
+            app.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
-            <a href="#tools" className="btn-gradient">Try the tools</a>
+            <a href="#tools" className="btn-gradient">
+              Try the tools
+            </a>
             <Button variant="outline" asChild>
               <a href="#features">Explore features</a>
             </Button>
@@ -30,7 +36,9 @@ export default function Hero() {
               { k: "Summaries", v: "key points" },
             ].map((s) => (
               <div key={s.k} className="glass">
-                <div className="text-xs font-semibold text-muted-foreground">{s.k}</div>
+                <div className="text-xs font-semibold text-muted-foreground">
+                  {s.k}
+                </div>
                 <div className="mt-1 text-sm font-bold">{s.v}</div>
               </div>
             ))}
